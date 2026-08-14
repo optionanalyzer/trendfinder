@@ -723,6 +723,7 @@ if chain_df is not None and live_pcr is not None and live_pcr != 99.9:
             signal_action = f"🛑 EXIT BUY (CALL): Trend Weakening"
             send_telegram_alert(f"🛑 *EXIT POSITIONAL TRADE*\n\nClose {suggested_strike}. Trend has weakened.")
             st.session_state.positional_state = "NONE" # Reset for next cycle
+            st.session_state.positional_target = {} # <--- ADD THIS LINE
         else:
             signal_action = f"🟢 HOLDING {suggested_strike} (Riding Trend)"
 
@@ -732,6 +733,7 @@ if chain_df is not None and live_pcr is not None and live_pcr != 99.9:
             signal_action = f"🛑 EXIT BUY (PUT): Trend Weakening"
             send_telegram_alert(f"🛑 *EXIT POSITIONAL TRADE*\n\nClose {suggested_strike}. Trend has weakened.")
             st.session_state.positional_state = "NONE" # Reset for next cycle
+            st.session_state.positional_target = {} # <--- ADD THIS LINE
         else:
             signal_action = f"🔴 HOLDING {suggested_strike} (Riding Trend)"
 
