@@ -455,7 +455,13 @@ if not active_strikes_df.empty:
         column_config=center_alignment_oc
     )
 
-    # --- SUMMARY ROW (ATM ± 2 POSITIONS AVERAGES WITH DELTA TRACKING) ---
+    # --- SUMMARY ROW (POSITIONS ATM±2 AND ACTIVITY ATM±5) ---
+    
+    # 1. Calculate Activity Averages (Full ATM ± 5 Chain)
+    bull_act_avg = oc_display_df['Bull Activity'].mean() if not oc_display_df.empty else 0
+    bear_act_avg = oc_display_df['Bear Activity'].mean() if not oc_display_df.empty else 0
+
+    # 2. Calculate Position Averages (Micro ATM ± 2 Chain)
     atm_idx_list = oc_display_df.index[oc_display_df['STRIKE'] == atm_strike].tolist()
     if atm_idx_list:
         pos = oc_display_df.index.get_loc(atm_idx_list[0])
@@ -466,21 +472,31 @@ if not active_strikes_df.empty:
     bull_pos_avg = micro_oc_df['Bull Positions'].mean() if not micro_oc_df.empty else 0
     bear_pos_avg = micro_oc_df['Bear Positions'].mean() if not micro_oc_df.empty else 0
 
-    # Unique session state keys to track values across refresh cycles
-    state_key_bull = f"prev_bull_avg_{target_instrument_key}_{selected_expiry}"
-    state_key_bear = f"prev_bear_avg_{target_instrument_key}_{selected_expiry}"
+    # 3. Unique session state keys for all 4 metrics
+    state_key_bull_pos = f"prev_bull_pos_{target_instrument_key}_{selected_expiry}"
+    state_key_bear_pos = f"prev_bear_pos_{target_instrument_key}_{selected_expiry}"
+    state_key_bull_act = f"prev_bull_act_{target_instrument_key}_{selected_expiry}"
+    state_key_bear_act = f"prev_bear_act_{target_instrument_key}_{selected_expiry}"
 
-    if state_key_bull not in st.session_state:
-        st.session_state[state_key_bull] = bull_pos_avg
-    if state_key_bear not in st.session_state:
-        st.session_state[state_key_bear] = bear_pos_avg
+    # Initialize states if not present
+    if state_key_bull_pos not in st.session_state: st.session_state[state_key_bull_pos] = bull_pos_avg
+    if state_key_bear_pos not in st.session_state: st.session_state[state_key_bear_pos] = bear_pos_avg
+    if state_key_bull_act not in st.session_state: st.session_state[state_key_bull_act] = bull_act_avg
+    if state_key_bear_act not in st.session_state: st.session_state[state_key_bear_act] = bear_act_avg
 
-    bull_diff = bull_pos_avg - st.session_state[state_key_bull]
-    bear_diff = bear_pos_avg - st.session_state[state_key_bear]
+    # Calculate differences from the last recorded state
+    bull_pos_diff = bull_pos_avg - st.session_state[state_key_bull_pos]
+    bear_pos_diff = bear_pos_avg - st.session_state[state_key_bear_pos]
+    bull_act_diff = bull_act_avg - st.session_state[state_key_bull_act]
+    bear_act_diff = bear_act_avg - st.session_state[state_key_bear_act]
 
-    st.session_state[state_key_bull] = bull_pos_avg
-    st.session_state[state_key_bear] = bear_pos_avg
+    # Update states for the next refresh cycle
+    st.session_state[state_key_bull_pos] = bull_pos_avg
+    st.session_state[state_key_bear_pos] = bear_pos_avg
+    st.session_state[state_key_bull_act] = bull_act_avg
+    st.session_state[state_key_bear_act] = bear_act_avg
 
+    # Helper function to render the up/down arrows
     def get_diff_html(diff):
         if diff > 0:
             return f"<span style='color:#1dc973; font-size:13px; font-weight:600;'>▲ +{int(diff):,}</span>"
@@ -489,27 +505,44 @@ if not active_strikes_df.empty:
         else:
             return f"<span style='color:#888888; font-size:13px; font-weight:600;'>▬ 0</span>"
     
-    st.write("") 
-    sum_col1, sum_col2 = st.columns(2)
+    st.write("") # Spacer
+    sum_col1, sum_col2, sum_col3, sum_col4 = st.columns(4)
     
     with sum_col1:
         st.markdown(f"""
         <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
-            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL POSITIONS (ATM±2)</p>
+            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL POS (ATM±2)</p>
             <h4 style="margin:5px 0;">{int(bull_pos_avg):,}</h4>
-            <div>{get_diff_html(bull_diff)}</div>
+            <div>{get_diff_html(bull_pos_diff)}</div>
         </div>
         """, unsafe_allow_html=True)
         
     with sum_col2:
         st.markdown(f"""
         <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
-            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR POSITIONS (ATM±2)</p>
-            <h4 style="margin:5px 0;">{int(bear_pos_avg):,}</h4>
-            <div>{get_diff_html(bear_diff)}</div>
+            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL ACT (ATM±5)</p>
+            <h4 style="margin:5px 0;">{int(bull_act_avg):,}</h4>
+            <div>{get_diff_html(bull_act_diff)}</div>
         </div>
         """, unsafe_allow_html=True)
 
+    with sum_col3:
+        st.markdown(f"""
+        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR POS (ATM±2)</p>
+            <h4 style="margin:5px 0;">{int(bear_pos_avg):,}</h4>
+            <div>{get_diff_html(bear_pos_diff)}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with sum_col4:
+        st.markdown(f"""
+        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR ACT (ATM±5)</p>
+            <h4 style="margin:5px 0;">{int(bear_act_avg):,}</h4>
+            <div>{get_diff_html(bear_act_diff)}</div>
+        </div>
+        """, unsafe_allow_html=True)
 # -------------------------------------------------------------------
 # 8. POSITION BUILDUP / POSITION SHIFT
 # -------------------------------------------------------------------
