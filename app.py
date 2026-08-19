@@ -8,6 +8,9 @@ import json
 import os
 from streamlit_autorefresh import st_autorefresh
 import plotly.graph_objects as go
+import sqlite3
+import uuid
+import hashlib
 
 # ===================================================================
 # ⚠️ HARDCODE YOUR ACCESS TOKEN HERE 
