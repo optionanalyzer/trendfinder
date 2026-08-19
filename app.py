@@ -455,13 +455,15 @@ if not active_strikes_df.empty:
         column_config=center_alignment_oc
     )
 
-    # --- SUMMARY ROW (POSITIONS ATM±2 AND ACTIVITY ATM±5) ---
+    # --- SUMMARY ROWS (MACRO ATM±5 & MICRO ATM±2) ---
     
-    # 1. Calculate Activity Averages (Full ATM ± 5 Chain)
-    bull_act_avg = oc_display_df['Bull Activity'].mean() if not oc_display_df.empty else 0
-    bear_act_avg = oc_display_df['Bear Activity'].mean() if not oc_display_df.empty else 0
+    # 1. Macro Data (Full ATM ± 5 Chain)
+    bull_pos_macro = oc_display_df['Bull Positions'].mean() if not oc_display_df.empty else 0
+    bull_act_macro = oc_display_df['Bull Activity'].mean() if not oc_display_df.empty else 0
+    bear_pos_macro = oc_display_df['Bear Positions'].mean() if not oc_display_df.empty else 0
+    bear_act_macro = oc_display_df['Bear Activity'].mean() if not oc_display_df.empty else 0
 
-    # 2. Calculate Position Averages (Micro ATM ± 2 Chain)
+    # 2. Micro Data (ATM ± 2 Chain)
     atm_idx_list = oc_display_df.index[oc_display_df['STRIKE'] == atm_strike].tolist()
     if atm_idx_list:
         pos = oc_display_df.index.get_loc(atm_idx_list[0])
@@ -469,32 +471,37 @@ if not active_strikes_df.empty:
     else:
         micro_oc_df = oc_display_df
 
-    bull_pos_avg = micro_oc_df['Bull Positions'].mean() if not micro_oc_df.empty else 0
-    bear_pos_avg = micro_oc_df['Bear Positions'].mean() if not micro_oc_df.empty else 0
+    bull_pos_micro = micro_oc_df['Bull Positions'].mean() if not micro_oc_df.empty else 0
+    bull_act_micro = micro_oc_df['Bull Activity'].mean() if not micro_oc_df.empty else 0
+    bear_pos_micro = micro_oc_df['Bear Positions'].mean() if not micro_oc_df.empty else 0
+    bear_act_micro = micro_oc_df['Bear Activity'].mean() if not micro_oc_df.empty else 0
 
-    # 3. Unique session state keys for all 4 metrics
-    state_key_bull_pos = f"prev_bull_pos_{target_instrument_key}_{selected_expiry}"
-    state_key_bear_pos = f"prev_bear_pos_{target_instrument_key}_{selected_expiry}"
-    state_key_bull_act = f"prev_bull_act_{target_instrument_key}_{selected_expiry}"
-    state_key_bear_act = f"prev_bear_act_{target_instrument_key}_{selected_expiry}"
+    # 3. Unique session state keys for all 8 metrics
+    keys = {
+        'bp_mac': f"prev_bp_mac_{target_instrument_key}_{selected_expiry}",
+        'ba_mac': f"prev_ba_mac_{target_instrument_key}_{selected_expiry}",
+        'brp_mac': f"prev_brp_mac_{target_instrument_key}_{selected_expiry}",
+        'bra_mac': f"prev_bra_mac_{target_instrument_key}_{selected_expiry}",
+        'bp_mic': f"prev_bp_mic_{target_instrument_key}_{selected_expiry}",
+        'ba_mic': f"prev_ba_mic_{target_instrument_key}_{selected_expiry}",
+        'brp_mic': f"prev_brp_mic_{target_instrument_key}_{selected_expiry}",
+        'bra_mic': f"prev_bra_mic_{target_instrument_key}_{selected_expiry}"
+    }
 
-    # Initialize states if not present
-    if state_key_bull_pos not in st.session_state: st.session_state[state_key_bull_pos] = bull_pos_avg
-    if state_key_bear_pos not in st.session_state: st.session_state[state_key_bear_pos] = bear_pos_avg
-    if state_key_bull_act not in st.session_state: st.session_state[state_key_bull_act] = bull_act_avg
-    if state_key_bear_act not in st.session_state: st.session_state[state_key_bear_act] = bear_act_avg
+    vals = {
+        'bp_mac': bull_pos_macro, 'ba_mac': bull_act_macro, 
+        'brp_mac': bear_pos_macro, 'bra_mac': bear_act_macro,
+        'bp_mic': bull_pos_micro, 'ba_mic': bull_act_micro, 
+        'brp_mic': bear_pos_micro, 'bra_mic': bear_act_micro
+    }
 
-    # Calculate differences from the last recorded state
-    bull_pos_diff = bull_pos_avg - st.session_state[state_key_bull_pos]
-    bear_pos_diff = bear_pos_avg - st.session_state[state_key_bear_pos]
-    bull_act_diff = bull_act_avg - st.session_state[state_key_bull_act]
-    bear_act_diff = bear_act_avg - st.session_state[state_key_bear_act]
-
-    # Update states for the next refresh cycle
-    st.session_state[state_key_bull_pos] = bull_pos_avg
-    st.session_state[state_key_bear_pos] = bear_pos_avg
-    st.session_state[state_key_bull_act] = bull_act_avg
-    st.session_state[state_key_bear_act] = bear_act_avg
+    # Initialize states & calculate diffs
+    diffs = {}
+    for k_short, k_full in keys.items():
+        if k_full not in st.session_state:
+            st.session_state[k_full] = vals[k_short]
+        diffs[k_short] = vals[k_short] - st.session_state[k_full]
+        st.session_state[k_full] = vals[k_short] # Update for next cycle
 
     # Helper function to render the up/down arrows
     def get_diff_html(diff):
@@ -505,42 +512,81 @@ if not active_strikes_df.empty:
         else:
             return f"<span style='color:#888888; font-size:13px; font-weight:600;'>▬ 0</span>"
     
-    st.write("") # Spacer
-    sum_col1, sum_col2, sum_col3, sum_col4 = st.columns(4)
+    st.write("") 
     
-    with sum_col1:
+    # --- ROW 1: MACRO (ATM ± 5) ---
+    st.markdown("<h6 style='margin-bottom: 5px; color: #888;'>MACRO TREND (ATM ± 5)</h6>", unsafe_allow_html=True)
+    mac_col1, mac_col2, mac_col3, mac_col4 = st.columns(4)
+    
+    with mac_col1:
         st.markdown(f"""
         <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
-            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL POS (ATM±2)</p>
-            <h4 style="margin:5px 0;">{int(bull_pos_avg):,}</h4>
-            <div>{get_diff_html(bull_pos_diff)}</div>
+            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL POS</p>
+            <h4 style="margin:5px 0;">{int(bull_pos_macro):,}</h4>
+            <div>{get_diff_html(diffs['bp_mac'])}</div>
         </div>
         """, unsafe_allow_html=True)
-        
-    with sum_col2:
+    with mac_col2:
         st.markdown(f"""
         <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
-            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL ACT (ATM±5)</p>
-            <h4 style="margin:5px 0;">{int(bull_act_avg):,}</h4>
-            <div>{get_diff_html(bull_act_diff)}</div>
+            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL ACT</p>
+            <h4 style="margin:5px 0;">{int(bull_act_macro):,}</h4>
+            <div>{get_diff_html(diffs['ba_mac'])}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with mac_col3:
+        st.markdown(f"""
+        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR POS</p>
+            <h4 style="margin:5px 0;">{int(bear_pos_macro):,}</h4>
+            <div>{get_diff_html(diffs['brp_mac'])}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with mac_col4:
+        st.markdown(f"""
+        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR ACT</p>
+            <h4 style="margin:5px 0;">{int(bear_act_macro):,}</h4>
+            <div>{get_diff_html(diffs['bra_mac'])}</div>
         </div>
         """, unsafe_allow_html=True)
 
-    with sum_col3:
+    st.write("")
+    
+    # --- ROW 2: MICRO (ATM ± 2) ---
+    st.markdown("<h6 style='margin-bottom: 5px; color: #888;'>MICRO MOMENTUM (ATM ± 2)</h6>", unsafe_allow_html=True)
+    mic_col1, mic_col2, mic_col3, mic_col4 = st.columns(4)
+    
+    with mic_col1:
         st.markdown(f"""
         <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
-            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR POS (ATM±2)</p>
-            <h4 style="margin:5px 0;">{int(bear_pos_avg):,}</h4>
-            <div>{get_diff_html(bear_pos_diff)}</div>
+            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL POS</p>
+            <h4 style="margin:5px 0;">{int(bull_pos_micro):,}</h4>
+            <div>{get_diff_html(diffs['bp_mic'])}</div>
         </div>
         """, unsafe_allow_html=True)
-
-    with sum_col4:
+    with mic_col2:
         st.markdown(f"""
         <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
-            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR ACT (ATM±5)</p>
-            <h4 style="margin:5px 0;">{int(bear_act_avg):,}</h4>
-            <div>{get_diff_html(bear_act_diff)}</div>
+            <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL ACT</p>
+            <h4 style="margin:5px 0;">{int(bull_act_micro):,}</h4>
+            <div>{get_diff_html(diffs['ba_mic'])}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with mic_col3:
+        st.markdown(f"""
+        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR POS</p>
+            <h4 style="margin:5px 0;">{int(bear_pos_micro):,}</h4>
+            <div>{get_diff_html(diffs['brp_mic'])}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with mic_col4:
+        st.markdown(f"""
+        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+            <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR ACT</p>
+            <h4 style="margin:5px 0;">{int(bear_act_micro):,}</h4>
+            <div>{get_diff_html(diffs['bra_mic'])}</div>
         </div>
         """, unsafe_allow_html=True)
 # -------------------------------------------------------------------
