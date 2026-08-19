@@ -514,13 +514,32 @@ if not active_strikes_df.empty:
     
     st.write("") 
     
+    # Helper logic for dominant backgrounds
+    def get_bg(bull_val, bear_val, is_bull):
+        if is_bull:
+            return "rgba(29, 201, 115, 0.25)" if bull_val > bear_val else "#1e1e1e"
+        else:
+            return "rgba(255, 75, 75, 0.25)" if bear_val > bull_val else "#1e1e1e"
+
+    # Macro Backgrounds
+    bg_bp_mac = get_bg(bull_pos_macro, bear_pos_macro, True)
+    bg_ba_mac = get_bg(bull_act_macro, bear_act_macro, True)
+    bg_brp_mac = get_bg(bull_pos_macro, bear_pos_macro, False)
+    bg_bra_mac = get_bg(bull_act_macro, bear_act_macro, False)
+    
+    # Micro Backgrounds
+    bg_bp_mic = get_bg(bull_pos_micro, bear_pos_micro, True)
+    bg_ba_mic = get_bg(bull_act_micro, bear_act_micro, True)
+    bg_brp_mic = get_bg(bull_pos_micro, bear_pos_micro, False)
+    bg_bra_mic = get_bg(bull_act_micro, bear_act_micro, False)
+
     # --- ROW 1: MACRO (ATM ± 5) ---
     st.markdown("<h6 style='margin-bottom: 5px; color: #888;'>MACRO TREND (ATM ± 5)</h6>", unsafe_allow_html=True)
     mac_col1, mac_col2, mac_col3, mac_col4 = st.columns(4)
     
     with mac_col1:
         st.markdown(f"""
-        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+        <div style="background-color:{bg_bp_mac}; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
             <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL POS</p>
             <h4 style="margin:5px 0;">{int(bull_pos_macro):,}</h4>
             <div>{get_diff_html(diffs['bp_mac'])}</div>
@@ -528,7 +547,7 @@ if not active_strikes_df.empty:
         """, unsafe_allow_html=True)
     with mac_col2:
         st.markdown(f"""
-        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+        <div style="background-color:{bg_ba_mac}; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
             <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL ACT</p>
             <h4 style="margin:5px 0;">{int(bull_act_macro):,}</h4>
             <div>{get_diff_html(diffs['ba_mac'])}</div>
@@ -536,7 +555,7 @@ if not active_strikes_df.empty:
         """, unsafe_allow_html=True)
     with mac_col3:
         st.markdown(f"""
-        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+        <div style="background-color:{bg_brp_mac}; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
             <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR POS</p>
             <h4 style="margin:5px 0;">{int(bear_pos_macro):,}</h4>
             <div>{get_diff_html(diffs['brp_mac'])}</div>
@@ -544,7 +563,7 @@ if not active_strikes_df.empty:
         """, unsafe_allow_html=True)
     with mac_col4:
         st.markdown(f"""
-        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+        <div style="background-color:{bg_bra_mac}; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
             <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR ACT</p>
             <h4 style="margin:5px 0;">{int(bear_act_macro):,}</h4>
             <div>{get_diff_html(diffs['bra_mac'])}</div>
@@ -559,7 +578,7 @@ if not active_strikes_df.empty:
     
     with mic_col1:
         st.markdown(f"""
-        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+        <div style="background-color:{bg_bp_mic}; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
             <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL POS</p>
             <h4 style="margin:5px 0;">{int(bull_pos_micro):,}</h4>
             <div>{get_diff_html(diffs['bp_mic'])}</div>
@@ -567,7 +586,7 @@ if not active_strikes_df.empty:
         """, unsafe_allow_html=True)
     with mic_col2:
         st.markdown(f"""
-        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+        <div style="background-color:{bg_ba_mic}; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
             <p style="color:#1dc973; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BULL ACT</p>
             <h4 style="margin:5px 0;">{int(bull_act_micro):,}</h4>
             <div>{get_diff_html(diffs['ba_mic'])}</div>
@@ -575,7 +594,7 @@ if not active_strikes_df.empty:
         """, unsafe_allow_html=True)
     with mic_col3:
         st.markdown(f"""
-        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+        <div style="background-color:{bg_brp_mic}; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
             <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR POS</p>
             <h4 style="margin:5px 0;">{int(bear_pos_micro):,}</h4>
             <div>{get_diff_html(diffs['brp_mic'])}</div>
@@ -583,7 +602,7 @@ if not active_strikes_df.empty:
         """, unsafe_allow_html=True)
     with mic_col4:
         st.markdown(f"""
-        <div style="background-color:#1e1e1e; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
+        <div style="background-color:{bg_bra_mic}; padding:12px; border-radius:8px; text-align:center; border: 1px solid #333;">
             <p style="color:#ff4b4b; margin:0; font-weight:bold; font-size:12px; text-align:center;">AVG BEAR ACT</p>
             <h4 style="margin:5px 0;">{int(bear_act_micro):,}</h4>
             <div>{get_diff_html(diffs['bra_mic'])}</div>
