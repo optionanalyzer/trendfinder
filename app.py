@@ -261,6 +261,9 @@ def get_option_chain_data(instrument_key, expiry_date, access_token, spot_price)
 # -------------------------------------------------------------------
 st.markdown("### 📊 FnO Intelligence Terminal (Positional)")
 st.markdown("---")
+if st.button("Logout 🚪", use_container_width=True):
+        logout()
+
 
 col1, col2, col3, col4, col5 = st.columns([1.5, 1.5, 1, 1, 1])
 
