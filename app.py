@@ -14,6 +14,110 @@ import plotly.graph_objects as go
 # ===================================================================
 ACCESS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzTUJDMzIiLCJqdGkiOiI2YTg1MjY0ZmRjMDU2YTc2OTNmMTk2OWYiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc4NzExMDk5MSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzg3MTc2ODAwfQ.BhHpOJDLYZinE2ComoBHshvs6nmvJSFQEU6pFaq9CNI" 
 
+
+# ===================================================================
+# 0. DATABASE & SINGLE-SESSION AUTHENTICATION ENGINE
+# ===================================================================
+def init_db():
+    """Initializes a local SQLite database for user management."""
+    conn = sqlite3.connect('fno_users.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users 
+                 (username TEXT PRIMARY KEY, password TEXT, active_session TEXT)''')
+    
+    # Create a default user (Username: admin | Password: admin123)
+    default_pw = hashlib.sha256('admin123'.encode()).hexdigest()
+    c.execute("INSERT OR IGNORE INTO users (username, password, active_session) VALUES (?, ?, ?)", 
+              ('admin', default_pw, None))
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# Initialize local session variables
+if 'session_id' not in st.session_state:
+    st.session_state.session_id = None
+if 'username' not in st.session_state:
+    st.session_state.username = None
+
+def verify_session():
+    """Checks if the current browser tab holds the active DB lock."""
+    if not st.session_state.session_id or not st.session_state.username:
+        return False
+    
+    conn = sqlite3.connect('fno_users.db')
+    c = conn.cursor()
+    c.execute("SELECT active_session FROM users WHERE username=?", (st.session_state.username,))
+    row = c.fetchone()
+    conn.close()
+    
+    # If the DB session matches our local session, we are authorized
+    if row and row[0] == st.session_state.session_id:
+        return True
+    return False
+
+def logout():
+    """Clears the DB lock and local session."""
+    if st.session_state.username:
+        conn = sqlite3.connect('fno_users.db')
+        c = conn.cursor()
+        c.execute("UPDATE users SET active_session = NULL WHERE username=?", (st.session_state.username,))
+        conn.commit()
+        conn.close()
+    st.session_state.session_id = None
+    st.session_state.username = None
+    st.rerun()
+
+# --- THE LOGIN SCREEN ---
+if not verify_session():
+    # We must call page config here if not authenticated, as it must be the first Streamlit command
+    st.set_page_config(page_title="Login - FnO Terminal", layout="centered")
+    
+    st.markdown("<h2 style='text-align: center;'>🔐 FnO Intelligence Terminal</h2>", unsafe_allow_html=True)
+    st.markdown("---")
+    
+    with st.form("login_form"):
+        st.write("Please log in to access the dashboard.")
+        input_user = st.text_input("Username")
+        input_pass = st.text_input("Password", type="password")
+        force_login = st.checkbox("Force terminate other active sessions")
+        
+        submit = st.form_submit_button("Login to Terminal")
+        
+        if submit:
+            hashed_pass = hashlib.sha256(input_pass.encode()).hexdigest()
+            conn = sqlite3.connect('fno_users.db')
+            c = conn.cursor()
+            c.execute("SELECT password, active_session FROM users WHERE username=?", (input_user,))
+            user_data = c.fetchone()
+            
+            if user_data:
+                db_pass, db_session = user_data
+                if db_pass == hashed_pass:
+                    if db_session is not None and not force_login:
+                        st.error("⚠️ You are already logged in on another device/browser. Check the box above to terminate it.")
+                    else:
+                        # Grant access and lock the session
+                        new_session_id = str(uuid.uuid4())
+                        c.execute("UPDATE users SET active_session=? WHERE username=?", (new_session_id, input_user))
+                        conn.commit()
+                        st.session_state.session_id = new_session_id
+                        st.session_state.username = input_user
+                        st.success("Login successful! Redirecting...")
+                        st.rerun()
+                else:
+                    st.error("Invalid password.")
+            else:
+                st.error("Invalid username.")
+            conn.close()
+            
+    # Stop the rest of the app from running if not logged in
+    st.stop()
+
+# ===================================================================
+# END AUTHENTICATION - MAIN APP CONTINUES BELOW
+# ===================================================================
+
 # ===================================================================
 # 📲 TELEGRAM ALERT CONFIGURATION
 # ===================================================================
