@@ -1162,9 +1162,9 @@ with tab4:
 
         # 3. Calculate "Trend" based on user formula: =IF(F3>10,"Bullish",IF(F3<-10,"Bearish","Sideways"))
         def calculate_trend(oi_diff):
-            if oi_diff > 10:
+            if oi_diff > 1:
                 return "Bullish"
-            elif oi_diff < -10:
+            elif oi_diff < -1:
                 return "Bearish"
             else:
                 return "Sideways"
